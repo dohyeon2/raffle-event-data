@@ -24,6 +24,7 @@ new raffle_event_custom_post([
         ob_start();
         $nft_list = @unserialize($nft_list) ?: [];
         $participants = null;
+        $duplication = @$duplication ?: "0";
 ?>
     <table class="form-table">
         <tbody>
@@ -31,6 +32,15 @@ new raffle_event_custom_post([
                 <th scope="row">참가자 수</th>
                 <td>
                     <?= $participants ?: 0 ?><input type="hidden" name="participants" value="<?= $participants ?: 0 ?>" />
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">중복참가</th>
+                <td>
+                    현재상태:<a id="duplication-button" class="button button-primary">
+                        <?= $duplication === "0" ? "중복금지" : "중복허용" ?>
+                    </a>
+                    <input type="hidden" name="duplication" value="<?= $duplication ?>" />
                 </td>
             </tr>
             <tr>
@@ -76,12 +86,12 @@ new raffle_event_custom_post([
                 <td>
                     <fieldset>
                         <label for="due-date">
-                            <input name="due_type" type="radio" id="due-date" value="date" <?= $due_type ? ($due_type === "date" ? "checked" : "") : "checked" ?> required>
+                            <input name="due_type" type="radio" id="due-date" value="date" <?= @$due_type ? ($due_type === "date" ? "checked" : "") : "checked" ?> required>
                             기한 만료시까지
                         </label>
                         &nbsp;|&nbsp;
                         <label for="due-full">
-                            <input name="due_type" type="radio" id="due-full" value="full" <?= $due_type === "full" ? "checked" : "" ?> required>
+                            <input name="due_type" type="radio" id="due-full" value="full" <?= @$due_type === "full" ? "checked" : "" ?> required>
                             선착순
                         </label>
                     </fieldset>
@@ -116,22 +126,16 @@ new raffle_event_custom_post([
                             $nft_list = "";
                             global $wpdb;
                             $data_list = $wpdb->get_results("SELECT DISTINCT 
-                                meta.meta_value, thumb.ID 
+                                meta.meta_value, thumb.ID, thumb.post_title AS 'title'
                                 FROM
-                                $wpdb->posts AS posts,
-                                $wpdb->postmeta AS meta,
-                                $wpdb->posts AS thumb
+                                (SELECT post_id, meta_key, meta_value FROM $wpdb->postmeta WHERE meta_value = 'nft_type') AS meta,
+                                (SELECT ID, post_type, post_title FROM $wpdb->posts WHERE post_type = 'attachment') AS thumb
                                 WHERE 
-                                thumb.post_type = 'attachment' AND
-                                thumb.post_title LIKE REPLACE(meta.meta_value,' ','_') AND
-                                meta.meta_key = 'apt_type' AND
-                                posts.post_type = 'nft_data'
+                                meta.post_id = thumb.ID
                                 ", ARRAY_A);
                             foreach ($data_list as $value) {
-                                if ($value["meta_value"] === NULL) {
-                                    continue;
-                                }
-                                $nft_list .= "<option value=\"$value[meta_value] (media:$value[ID])\"/>";
+                                $value['title'] = $value['title'] === "budong" ? "부동" : $value['title'];
+                                $nft_list .= "<option value=\"$value[title] (media:$value[ID])\"/>";
                             }
                             echo $nft_list;
                         })();
@@ -157,8 +161,8 @@ new raffle_event_custom_post([
                 <th scope="row">조건 설정</th>
                 <td>
                     <select name="condition">
-                        <option value="-" <?= $condition === "-" ? "selected" : "" ?>>-</option>
-                        <option value="shark_in_mars" <?= $condition === "shark_in_mars" ? "selected" : "" ?>>떡상어 보내기</option>
+                        <option value="-" <?= @$condition === "-" ? "selected" : "" ?>>-</option>
+                        <option value="shark_in_mars" <?= @$condition === "shark_in_mars" ? "selected" : "" ?>>떡상어 보내기</option>
                     </select>
                 </td>
             </tr>
@@ -170,7 +174,7 @@ new raffle_event_custom_post([
     },
     "save_postdata" => function ($post_id) {
         date_default_timezone_set("Asia/Seoul");
-        $list = ["start_date", "start_time", "due_date", "due_time", "end_date", "end_time", "full_count", "due_type", "nft_list", "condition", "bg_img", "char_img"];
+        $list = ["start_date", "start_time", "due_date", "due_time", "end_date", "end_time", "full_count", "due_type", "nft_list", "condition", "bg_img", "char_img", "duplication"];
         foreach ($list as $value) {
             if (key_exists($value, $_POST)) {
                 update_post_meta($post_id, $value, $_POST[$value]);

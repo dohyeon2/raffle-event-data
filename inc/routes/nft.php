@@ -8,8 +8,8 @@ new raffe_event_custom_endpoint([
         $params = $request->get_params();
         $id = $params['id'];
         $data = [];
-        $data["pariticipants_list"] = $params['user'];
-        $data["partticipants_item"] = $params['user'] . "=" . $params['item_id'];
+        $data["participants_list"] = $params['user'];
+        $data["participants_item"] = $params['user'] . "=" . $params['item_id'];
         $data["wallet_address"] = $params['user'] . "=" . $params['wallet_address'];
         $data["participates_date"] = $params['user'] . "=" . (time() + (HOUR_IN_SECONDS * 9));
 
@@ -69,6 +69,9 @@ new raffe_event_custom_endpoint([
                     if (count($complete_condition) === 0) {
                         return new WP_REST_Response("응모에 실패했습니다.", 400);
                     }
+                    if ($event["due_type"] === "full") {
+                        update_post_meta($id, "owner", $params['user']);
+                    }
                     break;
                 case "-":
                 default:
@@ -95,7 +98,7 @@ new raffe_event_custom_endpoint([
         global $wpdb;
         $params = $request->get_params();
         $page = @$params["page"] * 1 ?: 1;
-        $user = @$params["user"] * 1 ?: 0;
+        $user = wp_get_current_user()->ID ?: 0;
         $user_condition = $user ? "AND meta.meta_value = " . $user : "";
         $data_per_page = @$params["data_per_page"] * 1 ?: 10;
         $offset = ($page - 1) * $data_per_page;
@@ -114,7 +117,7 @@ new raffe_event_custom_endpoint([
             meta2.post_id = posts.ID AND
             meta4.post_id = posts.ID AND
             meta5.post_id = post2.ID AND
-            meta.meta_key = 'pariticipants_list' AND
+            meta.meta_key = 'participants_list' AND
             (
                 (meta2.meta_key = 'data_type' AND meta2.meta_value = 'nft_type') OR
                 (posts.ID = meta.post_id AND posts.post_type = 'nft_data')
@@ -152,7 +155,7 @@ new raffe_event_custom_endpoint([
         $new_result["max_page"] = ceil($new_result["whole_items"] / $data_per_page);
         foreach ($results as $key => $value) {
             extract($value);
-            $value["display_name"] = get_user_by("id", $participant_id) ?: "없는 유저입니다.";
+            $value["display_name"] = get_user_by("id", $participant_id)->data->display_name ?: "없는 유저입니다.";
             $value["wallet_address"] = preg_replace("/^" . $participant_id . "=/", "", $value["wallet_address"]) ?: "주소 정보가 없습니다.";
             $value["participates_date"] = preg_replace("/^" . $participant_id . "=/", "", $value["participates_date"]) ?: "참여 일자 정보가 없습니다.";
             $value["participates_date"] = date("Y-m-d H:i:s", $value["participates_date"] * 1);
@@ -168,6 +171,11 @@ new raffe_event_custom_endpoint([
                 case "진행중":
                 default:
                     $value["event_status"] = $value["event_status"];
+                    if (get_post_meta($value["event_id"], "due_type", true) === "full") {
+                        if ($user * 1 === @get_post_meta($value["nft_id"], "owner", true) * 1) {
+                            $value["event_status"] = "분양 성공!";
+                        }
+                    }
             }
             $new_result["data"][$key] = $value;
         }

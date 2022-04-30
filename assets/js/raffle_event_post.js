@@ -27,6 +27,32 @@
 })(jQuery);
 
 (($) => {
+    const button = $('#duplication-button');
+    function ChangeBtn() {
+        const input = $('input[name="duplication"]');
+        const value = input.val();
+        if (value !== "0") {
+            button.html("중복허용");
+        } else {
+            button.html("중복금지");
+        }
+    }
+    function toggleValue() {
+        const input = $('input[name="duplication"]');
+        const value = input.val();
+        if (value === "0") {
+            input.val("1");
+        } else {
+            input.val("0");
+        }
+        ChangeBtn();
+    }
+    button.on('click', (e) => {
+        toggleValue();
+    });
+})(jQuery);
+
+(($) => {
     function add_item_to_list(value) {
         const matches = value.match(/([^(]+)\s\((.+)\)/);
         const [all, label, id] = matches;

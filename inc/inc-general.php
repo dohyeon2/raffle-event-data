@@ -56,7 +56,9 @@ add_filter('media_meta', function ($a, $b) {
         return $a . "<div style='word-break:pre-wrap'>
         " . $b->post_title . "
         <b>남은 아이템 (총 : " . count($check_remain) . "개)</b><br/>
-        " . implode(", ", $check_remain) . "
+        " . implode(", ", array_map(function ($x) {
+            return get_post($x["ID"])->post_title;
+        }, $check_remain)) . "
         </div>
         <div>
         <b>응모한 유저 리스트</b><br/>
@@ -105,6 +107,9 @@ add_filter('raffle_event_custom_post_metadata', function ($data, $post) {
     if (in_array($post['type'], $types)) {
         foreach ($data as $key => $value) {
             switch ($key) {
+                case "apt_type":
+                    $value = $value[0] === "budong" ? "부동" : $value[0];
+                    break;
                 case "bg_img":
                 case "char_img":
                     $value = wp_get_attachment_url($value[0]);
@@ -119,7 +124,6 @@ add_filter('raffle_event_custom_post_metadata', function ($data, $post) {
                     } else {
                         $newdata["soldout"] =  false;
                     }
-                case "due_type":
                 case "end_date":
                 case "end_time":
                 case "end_time_int":
