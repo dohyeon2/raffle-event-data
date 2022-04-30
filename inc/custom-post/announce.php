@@ -6,12 +6,11 @@ new raffle_event_custom_post([
         "supports" => [
             "title",
             "editor",
-            "thumbnail",
-            "custom-fields"
+            "thumbnail"
         ]
     ],
-    "post_type_name" => "nft_data",
-    "post_label_name" => "NFT 데이터 포스트"
+    "post_type_name" => "raffle_announce",
+    "post_label_name" => "NFT 발표"
 ], [
     "custom_box_html" => function ($post) {
         extract((array)$post);
@@ -21,7 +20,7 @@ new raffle_event_custom_post([
     <table class="form-table">
         <tbody>
             <tr>
-                <th scope="row">응모자 수</th>
+                <th scope="row">발표 할 이벤트 선택</th>
                 <td>
                     <?= (isset($participants) && is_array($participants)) ? count($participants) : '0' ?>
                 </td>
@@ -41,7 +40,7 @@ new raffle_event_custom_post([
             }
         }
     },
-], []);
+], [], []);
 
 
 

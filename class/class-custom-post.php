@@ -2,7 +2,7 @@
 
 class raffle_event_custom_post
 {
-    public function __construct($array = [], $callbacks = [], $rest_attr = [])
+    public function __construct($array = [], $callbacks = [], $rest_attr = [], $filters = [])
     {
         $default = [
             "register_options" => [
@@ -27,8 +27,10 @@ class raffle_event_custom_post
             },
             "type_custom_columns" => function () {
             },
-            "before_request_served_callback"=> function(){}
+            "before_request_served_callback" => function () {
+            }
         ];
+        $this->filters = $filters;
         $this->rest_attr = $rest_attr;
         $this->array = array_merge_recursive($default, $array);
         $this->callbacks = array_replace_recursive($defaultCallbacks, $callbacks);
@@ -38,8 +40,8 @@ class raffle_event_custom_post
 
         $this->array["register_options"]["labels"]["name"] = $this->array["post_label_name"];
         $this->array["register_options"]["labels"]["singular_name"] = $this->array["post_type_name"];
-        $js_name = $this->array["post_type_name"]. '';
-        $js_name = plugins_url('/assets/js/post_type/' . $js_name . '.js',FILE);
+        $js_name = $this->array["post_type_name"] . '';
+        $js_name = plugins_url('/assets/js/post_type/' . $js_name . '.js', FILE);
         $this->js_name = $js_name;
 
         //스크립트 등록
@@ -52,9 +54,14 @@ class raffle_event_custom_post
         add_filter('manage_' . $this->array["post_type_name"] . '_posts_columns', array($this, "type_posts_columns"));
         add_action('manage_' . $this->array["post_type_name"] . '_posts_custom_column', array($this, "type_custom_columns"), 10, 2);
         add_action('rest_api_init', array($this, 'register_rest_attrs'));
-        add_action('raffle_event_rest_pre_serve_request',array($this,'before_request_served'),10,4);
+        add_filter('rest_pre_serve_request', function (bool $served, WP_HTTP_Response $result, WP_REST_Request $request, WP_REST_Server $server) {
+            do_action('raffle_event_rest_pre_serve_request', $served, $result, $request, $server);
+            return $served;
+        }, 10, 4);
+        add_action('raffle_event_rest_pre_serve_request', array($this, 'before_request_served'), 10, 4);
     }
-    public function before_request_served($served, $result, $request, $server){
+    public function before_request_served($served, $result, $request, $server)
+    {
         $this->callbacks["before_request_served_callback"]($result, $request, $server, $this->array);
         return $served;
     }
@@ -85,9 +92,7 @@ class raffle_event_custom_post
                         return false;
                     }
                 }, ARRAY_FILTER_USE_KEY);
-                return array_map(function ($value) {
-                    return $value[0];
-                }, $meta);
+                return apply_filters('raffle_event_custom_post_metadata', $meta, $data);
             },
         ));
         register_rest_field($this->array["post_type_name"], 'categories_slug', array(
@@ -99,11 +104,14 @@ class raffle_event_custom_post
         ));
         register_rest_field($this->array["post_type_name"], 'request_server_time', array(
             'get_callback' => function ($data) {
-                return time() + 9*60*60;
+                return time() + 9 * 60 * 60;
             },
         ));
-        foreach($this->rest_attr as $key => $value){
+        foreach ($this->rest_attr as $key => $value) {
             register_rest_field($this->array["post_type_name"], $key, $value);
+        }
+        foreach ($this->filters as $key => $value) {
+            add_filter($key, ...$value);
         }
     }
     public function current_screen($curr_screen)
