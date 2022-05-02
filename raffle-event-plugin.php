@@ -19,3 +19,4 @@ foreach (glob(dirname(__FILE__) . "/class/*.php") as $key => $value) {
 foreach (glob(dirname(__FILE__) . "/inc/*.php") as $key => $value) {
     include_once $value;
 }
+
