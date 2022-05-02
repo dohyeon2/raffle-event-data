@@ -119,7 +119,7 @@ class raffle_event_custom_post
         $post_type_name = $this->array['post_type_name'];
         $js_name = $this->js_name;
         if ($curr_screen->id === $post_type_name) {
-            if (file_exists(TM_PATH . '/assets/js/post_type/' . $post_type_name . '.js')) {
+            if (file_exists(plugin_dir_path(FILE) . '/assets/js/post_type/' . $post_type_name . '.js')) {
                 wp_enqueue_script($js_name, $js_name, array("jquery", "jquery-ui-sortable"), false, true);
             }
         }

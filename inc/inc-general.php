@@ -93,9 +93,17 @@ add_filter('raffle_event_custom_post_metadata', function ($data, $post) {
         $newdata['event'] = [
             "due_type" => get_post_meta($event->ID, "due_type", true),
             "condition" => get_post_meta($event->ID, "condition", true),
+            "event_id" => $newdata['event'][0]["id"],
+            "duplication" => get_post_meta($eventpost->ID, "duplication", true),
+            "nft_list" => get_post_meta($eventpost->ID, "nft_list", true),
         ];
+        $newdata["event"]["nft_list"] =  array_map(function ($x) {
+            return preg_replace("/[^-]*-.*?:?(\d+)/", "$1", $x);
+        }, $newdata["event"]["nft_list"]);
     }
-
+    // if ($newdata['event']["duplication"] === "0" && in_array($post["id"], $newdata["event"]["nft_list"])) {
+    //     $newdata["status"] = "end";
+    // }
     if ($post['type'] === "raffle_event_post") {
         if (count($post['categories']) > 0) {
             $newdata["status"] = get_category($post['categories'][0])->slug;
@@ -144,3 +152,4 @@ add_filter('raffle_event_custom_post_metadata', function ($data, $post) {
     }
     return $newdata;
 }, 10, 2);
+

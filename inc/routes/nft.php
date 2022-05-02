@@ -24,16 +24,31 @@ new raffe_event_custom_endpoint([
                 meta.meta_value REGEXP '$regexp'
         ", ARRAY_A);
         if (count($event) > 0) {
-            foreach ($event as $key => $value) {
+            $eventpost = array_filter($event, function ($key, $value) {
                 $eventpost = @get_post($value["id"]) ?: false;
                 if (!$eventpost) {
                     delete_post_meta($value["id"], 'nft_list');
+                    return false;
+                } else {
+                    return true;
                 }
+            }, ARRAY_FILTER_USE_BOTH);
+            $eventpost = $eventpost[0];
+            $event_id = $eventpost->ID;
+            $event_instance = new Raffle_Event($event_id);
+            $event_instance->update_event_status();
+            $event_status = $event_instance->status;
+            if (!$event_status) {
+                return new WP_REST_Response("이벤트가 없습니다.", 400);
             }
-            $eventpost = get_post(@$event[0]["id"]);
+            if ($event_status !== "raffle-event-proceed") {
+                return new WP_REST_Response("이벤트가 진행중이 아닙니다.", 400);
+            }
             $event = [
                 "due_type" => get_post_meta($eventpost->ID, "due_type", true),
                 "condition" => get_post_meta($eventpost->ID, "condition", true),
+                "duplication" => get_post_meta($eventpost->ID, "duplication", true),
+                "nft_list" => get_post_meta($eventpost->ID, "nft_list", true),
             ];
             switch ($event["condition"]) {
                 case "shark_in_mars":
@@ -69,21 +84,28 @@ new raffe_event_custom_endpoint([
                     if (count($complete_condition) === 0) {
                         return new WP_REST_Response("응모에 실패했습니다.", 400);
                     }
-                    if ($event["due_type"] === "full") {
-                        update_post_meta($id, "owner", $params['user']);
+                    if ($event["duplication"] === "0" && in_array($params["item_id"], $event["nft_list"])) {
+                        return new WP_REST_Response("중복참여금지", 400);
                     }
                     break;
                 case "-":
                 default:
                     break;
             }
+        } else {
+            return new WP_REST_Response("이벤트에 등록되지 않은 아이템입니다.", 400);
         }
-
+        if (get_post_meta($params['item_id'], "owner", true) * 1 !== 0) {
+            return new WP_REST_Response("이미 분양된 아이템입니다.", 409);
+        }
         foreach ($data as $key => $value) {
             if ($exist = in_array($value, get_post_meta($id, $key))) {
                 return new WP_REST_Response("이미 응모한 유저입니다.", 409);
             }
             add_post_meta($id, $key, $value);
+        }
+        if ($event["due_type"] === "full") {
+            update_post_meta($id, "owner", $params['user']);
         }
         return new WP_REST_Response("정상적으로 응모 되었습니다.", 200);
     },
@@ -165,7 +187,6 @@ new raffe_event_custom_endpoint([
             switch ($value["event_status"]) {
                 case "종료된":
                     $value["event_status"] = $value["is_announced"] ? "종료" : "추첨중";
-
                 case "예정된":
                     $value["event_status"] = "예정";
                 case "진행중":

@@ -186,119 +186,36 @@ new raffle_event_custom_post([
         if (key_exists('end_date', $_POST) && key_exists('end_time', $_POST)) {
             update_post_meta($post_id, "end_time_int", strtotime($_POST['end_date'] . " " . $_POST['end_time']) + (HOUR_IN_SECONDS * 9));
         }
-    },
-    // "before_request_served_callback" => function ($result, $request, $server, $array) {
-    //     $post_type_name = $array["post_type_name"];
-    //     $time = time() + (HOUR_IN_SECONDS * 9);
-    //     if (preg_match("/\/" . $post_type_name . "\/?/", $request->get_route(), $match)) {
-    //         global $wpdb;
-    //         $ended_posts = $wpdb->get_results("SELECT DISTINCT
-    //             posts.ID 
-    //         FROM 
-    //             {$wpdb->prefix}posts AS posts,
-    //             {$wpdb->prefix}postmeta AS meta1,
-    //             {$wpdb->prefix}postmeta AS meta2,
-    //             {$wpdb->prefix}postmeta AS meta3,
-    //             {$wpdb->prefix}postmeta AS meta4
-    //         WHERE
-    //             posts.post_type = '$post_type_name' AND
-    //             posts.ID = meta1.post_id AND
-    //             posts.ID = meta2.post_id AND
-    //             posts.ID = meta3.post_id AND
-    //             posts.ID = meta4.post_id AND(
-    //                 (   
-    //                     (meta1.meta_key = 'due_type' AND meta1.meta_value = 'date') AND
-    //                     (meta2.meta_key = 'end_time_int' AND cast(meta2.meta_value as UNSIGNED) <= cast($time as UNSIGNED)) 
-    //                 )
-    //             )
-    //         ", OBJECT);
-    //         $upcomming_post = $wpdb->get_results("SELECT DISTINCT
-    //             posts.ID
-    //         FROM 
-    //             {$wpdb->prefix}posts AS posts,
-    //             {$wpdb->prefix}postmeta AS meta1
-    //         WHERE
-    //             posts.post_type = '$post_type_name' AND
-    //             posts.ID = meta1.post_id AND
-    //             (   
-    //                 (meta1.meta_key = 'start_time_int' AND  cast(meta1.meta_value as UNSIGNED) >= cast($time as UNSIGNED))
-    //             )
-    //         ", OBJECT);
-    //         $proceed_post = $wpdb->get_results("SELECT DISTINCT
-    //             posts.ID 
-    //         FROM 
-    //             {$wpdb->prefix}posts AS posts,
-    //             {$wpdb->prefix}postmeta AS meta1,
-    //             {$wpdb->prefix}postmeta AS meta2,
-    //             {$wpdb->prefix}postmeta AS meta3,
-    //             {$wpdb->prefix}postmeta AS meta4
-    //         WHERE
-    //             posts.post_type = '$post_type_name' AND
-    //             posts.ID = meta1.post_id AND
-    //             posts.ID = meta2.post_id AND
-    //             posts.ID = meta3.post_id AND
-    //             posts.ID = meta4.post_id AND
-    //             (
-    //                 (   
-    //                     (meta1.meta_key = 'due_type' AND meta1.meta_value = 'date') AND
-    //                     (meta2.meta_key = 'end_time_int' AND cast(meta2.meta_value as UNSIGNED) >= cast($time as UNSIGNED)) AND
-    //                     (meta3.meta_key = 'start_time_int' AND cast(meta3.meta_value as UNSIGNED) <= cast($time as UNSIGNED))
-    //                 )
-    //             )
-    //         ", OBJECT);
-
-    //         foreach ($upcomming_post as $value) {
-    //             wp_update_post([
-    //                 "ID" => $value->ID,
-    //                 "post_category" => [get_category_by_slug('raffle-event-upcomming')->term_id]
-    //             ]);
-    //         }
-    //         foreach ($ended_posts as $value) {
-    //             wp_update_post([
-    //                 "ID" => $value->ID,
-    //                 "post_category" => [get_category_by_slug('raffle-event-end')->term_id]
-    //             ]);
-    //         }
-    //         foreach ($proceed_post as $value) {
-    //             wp_update_post([
-    //                 "ID" => $value->ID,
-    //                 "post_category" => [get_category_by_slug('raffle-event-proceed')->term_id]
-    //             ]);
-    //         }
-    //     }
-    // }
+    }
 ], [],  [
     "raffle_event_custom_post_metadata" => [function ($arr, $post) {
-        $new_arr = [];
-        foreach ($arr as $key => $value) {
-            if ($v = @unserialize($value)) {
-                $x = $v;
-            } else {
-                $x = $value;
+        if ($post["type"] === "raffle_event_post") {
+            $event_id = $post["id"];
+            $new_arr = [];
+            foreach ($arr as $key => $value) {
+                if ($v = @unserialize($value)) {
+                    $x = $v;
+                } else {
+                    $x = $value;
+                }
+                $new_arr[$key] = $x;
             }
-            $new_arr[$key] = $x;
-        }
-        $new_arr["participants"] = 0;
-        $new_arr["nft_list_ids"] = [];
-        if (key_exists("nft_list", $new_arr)) {
-            foreach ($new_arr["nft_list"] as $key => $value) {
-                preg_match("/-.*?:?(\d+)/", $value, $match);
-                $id = $match[1];
-                $new_arr["participants"] += count(get_post_meta($id, "pariticipants_list")) ?: 0;
-                array_push($new_arr["nft_list_ids"], $id);
+            $new_arr["participants"] = 0;
+            $new_arr["nft_list_ids"] = [];
+            $new_arr["participants_list"]  = [];
+            if (key_exists("nft_list", $new_arr)) {
+                foreach ($new_arr["nft_list"] as $key => $value) {
+                    preg_match("/-.*?:?(\d+)/", $value, $match);
+                    $id = $match[1];
+                    $new_arr["participants"] += count(get_post_meta($id, "participants_list")) ?: 0;
+                    $new_arr["participants_list"] = array_merge($new_arr["participants_list"], get_post_meta($id, "participants_list"));
+                    array_push($new_arr["nft_list_ids"], $id);
+                }
             }
+            $event_instance = new Raffle_Event($event_id);
+            $event_instance->update_event_status();
+            return $new_arr;
         }
-        if (get_post_meta($post['id'], "due_type", true) === "full" && $new_arr["participants"] * 1 === get_post_meta($post['id'], "full_count", true) * 1) {
-            wp_update_post([
-                "ID" => $post['id'],
-                "post_category" => [get_category_by_slug('raffle-event-end')->term_id]
-            ]);
-        } else {
-            wp_update_post([
-                "ID" => $post['id'],
-                "post_category" => [get_category_by_slug('raffle-event-proceed')->term_id]
-            ]);
-        }
-        return $new_arr;
+        return $arr;
     }, 10, 2]
 ]);
