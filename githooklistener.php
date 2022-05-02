@@ -1,6 +1,6 @@
 <?php
 var_dump("listening");
 
-exec("git pull", $output);
+exec("bash ./gitpull.sh", $output);
 
 var_dump($output);
