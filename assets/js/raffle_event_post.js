@@ -1,36 +1,73 @@
 (($) => {
-    toggleTr($('input[name="due_type"][checked]').val());
-    $(document).on("change", 'input[name="due_type"]', (e) => {
-        const { target } = e;
-        toggleTr(target.value);
-    });
+    //상수 선언
+    const DUETYPE_NAME = 'due_type';
 
-    function toggleTr(value) {
+    //선택된 종료 타입
+    const inputElChecked = $('input[name="' + DUETYPE_NAME + '"][checked]');
+    const getInputElCheckedValue = () => inputElChecked.val();
+
+    /**
+     * @param {object} callback 도큐멘트 렌더링 시 실행될 함수
+     * @returns {void}
+     */
+    function init(callback) {
+        $(document).ready(() => {
+            callback();
+        });
+    }
+
+    /**
+     * 종료 타입에 따른 테이블로우 스왑
+     * @param {string} value 종료 타입 값
+     * @returns {void}
+     */
+    function swapTr(value) {
         enableInput(`set-${value}`);
         $(`input[name="due_type"]:not([value="${value}"])`).each((i, v) => {
             disableInput(`set-${v.value}`);
         });
     }
 
+    /**
+     * 특정 클래스의 input을 필수화하고, 부모의 display를 회복시킴
+     * @param {string} className 
+     */
     function enableInput(className) {
         $(`tr.${className} input`).attr("required", true);
         $(`tr.${className}`).css({
             display: "table-row"
         });
     };
+
+    /**
+     * 특정 클래스의 input을 필수화를 해제하고, 부모의 display를 삭제시킴
+     * @param {string} className 
+     */
     function disableInput(className) {
         $(`tr.${className} input`).attr("required", false);
         $(`tr.${className}`).css({
             display: "none"
         });
     };
+
+    init(() => {
+        swapTr(getInputElCheckedValue());
+    });
+
+
+    $(document).on("change", 'input[name="' + DUETYPE_NAME + '"]', (e) => {
+        const { target } = e;
+        swapTr(target.value);
+    });
+
 })(jQuery);
 
 (($) => {
+    //중복금지 컨트롤
     const button = $('#duplication-button');
+    const getInput = () => $('input[name="duplication"]');
     function ChangeBtn() {
-        const input = $('input[name="duplication"]');
-        const value = input.val();
+        const value = getInput().val();
         if (value !== "0") {
             button.html("중복허용");
         } else {
@@ -38,8 +75,7 @@
         }
     }
     function toggleValue() {
-        const input = $('input[name="duplication"]');
-        const value = input.val();
+        const value = getInput().val();
         if (value === "0") {
             input.val("1");
         } else {
