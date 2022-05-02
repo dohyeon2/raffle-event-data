@@ -62,7 +62,6 @@ class raffle_event_custom_post
     }
     public function before_request_served($served, $result, $request, $server)
     {
-        $this->callbacks["before_request_served_callback"]($result, $request, $server, $this->array);
         return $served;
     }
     public function register_rest_attrs()
