@@ -62,16 +62,3 @@ add_action('rest_api_init', function () {
         },
     ));
 });
-
-// add_action("init", function () {
-//     wp_insert_post([
-//         "ID" => 0,
-//         "post_title" => "테스트 아이템",
-//         "post_status" => "publish",
-//         "post_type" => "nft_data",
-//         "meta_input" => [
-//             "apt_type" => "부동",
-//             "owner" => 0,
-//         ],
-//     ]);
-// });

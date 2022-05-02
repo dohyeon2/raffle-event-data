@@ -1,4 +1,7 @@
 <?php
+
+use LDAP\Result;
+
 add_action('admin_enqueue_scripts', 'enqueue_style');
 
 function enqueue_style()
@@ -101,9 +104,6 @@ add_filter('raffle_event_custom_post_metadata', function ($data, $post) {
             return preg_replace("/[^-]*-.*?:?(\d+)/", "$1", $x);
         }, $newdata["event"]["nft_list"]);
     }
-    // if ($newdata['event']["duplication"] === "0" && in_array($post["id"], $newdata["event"]["nft_list"])) {
-    //     $newdata["status"] = "end";
-    // }
     if ($post['type'] === "raffle_event_post") {
         if (count($post['categories']) > 0) {
             $newdata["status"] = get_category($post['categories'][0])->slug;
@@ -152,4 +152,3 @@ add_filter('raffle_event_custom_post_metadata', function ($data, $post) {
     }
     return $newdata;
 }, 10, 2);
-
