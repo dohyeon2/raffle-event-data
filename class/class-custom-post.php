@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Deprecated:다음버전에서 사라질 클래스
+ * @see class/RaffleEvent_CustomPost
+ */
 class raffle_event_custom_post
 {
     public function __construct($array = [], $callbacks = [], $rest_attr = [], $filters = [])
@@ -50,7 +54,6 @@ class raffle_event_custom_post
         add_action('add_meta_boxes', array($this, "add_custom_box"));
         add_action('save_post', array($this, "save_postdata"));
 
-        //리스트 열 수정
         add_filter('manage_' . $this->array["post_type_name"] . '_posts_columns', array($this, "type_posts_columns"));
         add_action('manage_' . $this->array["post_type_name"] . '_posts_custom_column', array($this, "type_custom_columns"), 10, 2);
         add_action('rest_api_init', array($this, 'register_rest_attrs'));
@@ -77,23 +80,25 @@ class raffle_event_custom_post
                     }
                     return false;
                 },
-                'update_callback' => null,
-                'schema'          => null,
             )
         );
-        register_rest_field($this->array["post_type_name"], 'metadata', array(
-            'get_callback' => function ($data) {
-                $meta = array_filter(get_post_meta($data['id']), function ($key) {
-                    preg_match("/^_.?/", $key, $matches);
-                    if (count($matches) === 0) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }, ARRAY_FILTER_USE_KEY);
-                return apply_filters('raffle_event_custom_post_metadata', $meta, $data);
-            },
-        ));
+        register_rest_field(
+            $this->array["post_type_name"],
+            'metadata',
+            array(
+                'get_callback' => function ($data) {
+                    $meta = array_filter(get_post_meta($data['id']), function ($key) {
+                        preg_match("/^_.?/", $key, $matches);
+                        if (count($matches) === 0) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }, ARRAY_FILTER_USE_KEY);
+                    return apply_filters('raffle_event_custom_post_metadata', $meta, $data);
+                },
+            )
+        );
         register_rest_field($this->array["post_type_name"], 'categories_slug', array(
             'get_callback' => function ($data) {
                 return array_map(function ($value) {

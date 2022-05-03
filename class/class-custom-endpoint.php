@@ -1,8 +1,11 @@
 <?php
+
 /**
  * 워드프레스 REST API 엔드포인트 추가용도  
  * 옵션의 내용에 맞게 입력하면 등록됨  
- * @package RaffleEvent_CustomEndpoint
+ * @package RaffleEvent
+ * @subpackage CustomEndpoint
+ * @link https://github.com/dohyeon2/raffle-event-plugin/blob/master/class/class-custom-endpoint.php#L3-L118
  */
 class RaffleEvent_CustomEndpoint
 {
@@ -32,6 +35,7 @@ class RaffleEvent_CustomEndpoint
         ];
         $this->option = array_merge($this->option, $option);
         $this->fullpath = $this->option["namespace"] . $this->path["path"];
+        $this->register_api();
     }
 
     /**
@@ -39,7 +43,7 @@ class RaffleEvent_CustomEndpoint
      * 엔드포인트에서 리스폰스 이후 처리를 추가하기 위함
      * @return void
      */
-    function endpoint_callback_extend($request)
+    private function endpoint_callback_extend($request)
     {
         /**
          * {endpoint_path}_pre_response_action
@@ -70,7 +74,7 @@ class RaffleEvent_CustomEndpoint
      * @param WP_REST_Request $request 워드프레스 리퀘스트 변수
      * @return void
      */
-    function endpoint_callback(WP_REST_Request $request)
+    private function endpoint_callback(WP_REST_Request $request)
     {
         /**
          * {endpoint_path}_pre_request_action
@@ -99,7 +103,7 @@ class RaffleEvent_CustomEndpoint
      * 인스턴스의 옵션 변수를 사용해 Wordpress의 rest route에 함수를 신규 등록함
      * @return void
      */
-    function register_api()
+    private function register_api()
     {
         register_rest_route(
             $this->option["namespace"],
@@ -116,6 +120,7 @@ class RaffleEvent_CustomEndpoint
 /**
  * Deprecated:다음버전에서 사라질 클래스
  * @see class/RaffleEvent_CustomEndpoint
+ * @link https://github.com/dohyeon2/raffle-event-plugin/blob/master/class/class-custom-endpoint.php#L3-L116
  */
 class raffe_event_custom_endpoint
 {

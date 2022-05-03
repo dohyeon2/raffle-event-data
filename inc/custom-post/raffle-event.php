@@ -212,7 +212,7 @@ new raffle_event_custom_post([
                     array_push($new_arr["nft_list_ids"], $id);
                 }
             }
-            $event_instance = new Raffle_Event($event_id);
+            $event_instance = new RaffleEvent_EventData($event_id);
             $event_instance->update_event_status();
             return $new_arr;
         }

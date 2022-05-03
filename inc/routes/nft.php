@@ -35,7 +35,7 @@ new raffe_event_custom_endpoint([
             }, ARRAY_FILTER_USE_BOTH);
             $eventpost = $eventpost[0];
             $event_id = $eventpost->ID;
-            $event_instance = new Raffle_Event($event_id);
+            $event_instance = new RaffleEvent_EventData($event_id);
             $event_instance->update_event_status();
             $event_status = $event_instance->status;
             if (!$event_status) {

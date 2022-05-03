@@ -1,6 +1,6 @@
 <?php
 
-class Raffle_Event
+class RaffleEvent_EventData
 {
     public function __construct($event_id)
     {
