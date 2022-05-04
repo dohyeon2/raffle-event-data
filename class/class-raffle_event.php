@@ -23,6 +23,15 @@ class RaffleEvent_EventData
 
         return $this;
     }
+    public function get_nft_group_items()
+    {
+        return get_posts([
+            "post_type" => "raffle_nft_group",
+            "post_parent" => $this->ID,
+            "nopaging" => true,
+        ]);
+    }
+
     public function update_event_status()
     {
         $event_id = $this->ID;

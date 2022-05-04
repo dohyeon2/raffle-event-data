@@ -242,6 +242,8 @@ new raffle_event_custom_post([
                 }
                 $new_arr[$key] = $x;
             }
+            $event_data = new RaffleEvent_EventData($post["id"]);
+            $new_arr["nft_group_list"] = $event_data->get_nft_group_items();
             $new_arr["participants"] = 0;
             $new_arr["nft_list_ids"] = [];
             $new_arr["participants_list"]  = [];
