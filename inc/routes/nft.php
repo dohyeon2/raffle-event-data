@@ -2,19 +2,30 @@
 //nft응모 데이터 반영
 new raffe_event_custom_endpoint([
     "methods" => "POST",
-    "path" => "/nft/(?P<id>\d+)",
+    "path" => "/nft",
     "namespace" => "raffle_event/v1",
     "endpoint_callback" => function ($request) {
         $params = $request->get_params();
-        $id = $params['id'];
+        $user = wp_get_current_user();
+        $user_id = $user->ID;
+        $item_id = $params['item_id'];
+        $default_complete_message = "화섬 아파트 이벤트 응모가 완료되었습니다!
+        이벤트 발표는 이벤트 마감일에 홈페이지에 공개됩니다 : )";
+        $complete_message = $default_complete_message;
+        $itemname = get_post($item_id)->post_title;
+        $wallet_address = get_user_meta($user_id, "wallet_address", true);
+        if (!$wallet_address) {
+            return new WP_REST_Response("지갑 주소 정보가 없습니다.", 404);
+        }
+        if (!$user_id) {
+            return new WP_REST_Response("유저를 찾을 수 없습니다.", 404);
+        }
         $data = [];
-        $data["participants_list"] = $params['user'];
-        $data["participants_item"] = $params['user'] . "=" . $params['item_id'];
-        $data["wallet_address"] = $params['user'] . "=" . $params['wallet_address'];
-        $data["participates_date"] = $params['user'] . "=" . (time() + (HOUR_IN_SECONDS * 9));
+        $data["participants_list"] = $user_id;
+        $data["participates_date"] = $user_id . "=" . (time() + (HOUR_IN_SECONDS * 9));
 
         global $wpdb;
-        $regexp = "-[^:]*:?" . $params["item_id"];
+        $regexp = "-[^:]*:?" . $item_id;
         $event = $wpdb->get_results("SELECT DISTINCT post.ID AS id FROM
                 $wpdb->posts AS post,
                 $wpdb->postmeta AS meta
@@ -24,7 +35,7 @@ new raffe_event_custom_endpoint([
                 meta.meta_value REGEXP '$regexp'
         ", ARRAY_A);
         if (count($event) > 0) {
-            $eventpost = array_filter($event, function ($key, $value) {
+            $eventpost = array_filter($event, function ($value, $keys) {
                 $eventpost = @get_post($value["id"]) ?: false;
                 if (!$eventpost) {
                     delete_post_meta($value["id"], 'nft_list');
@@ -34,7 +45,7 @@ new raffe_event_custom_endpoint([
                 }
             }, ARRAY_FILTER_USE_BOTH);
             $eventpost = $eventpost[0];
-            $event_id = $eventpost->ID;
+            $event_id = $eventpost['id'];
             $event_instance = new RaffleEvent_EventData($event_id);
             $event_instance->update_event_status();
             $event_status = $event_instance->status;
@@ -45,11 +56,14 @@ new raffe_event_custom_endpoint([
                 return new WP_REST_Response("이벤트가 진행중이 아닙니다.", 400);
             }
             $event = [
-                "due_type" => get_post_meta($eventpost->ID, "due_type", true),
-                "condition" => get_post_meta($eventpost->ID, "condition", true),
-                "duplication" => get_post_meta($eventpost->ID, "duplication", true),
-                "nft_list" => get_post_meta($eventpost->ID, "nft_list", true),
+                "due_type" => get_post_meta($event_id, "due_type", true),
+                "condition" => get_post_meta($event_id, "condition", true),
+                "duplication" => get_post_meta($event_id, "duplication", true),
+                "nft_list" => get_post_meta($event_id, "nft_list", true),
             ];
+            if (get_post_meta($item_id, "owner", true) * 1 !== 0) {
+                return new WP_REST_Response("이미 분양된 아이템입니다.", 409);
+            }
             switch ($event["condition"]) {
                 case "shark_in_mars":
                     $complete_condition_user_condition = "\"userId\":" . $params['user'];
@@ -82,11 +96,13 @@ new raffe_event_custom_endpoint([
                         ARRAY_A
                     ) ?: [];
                     if (count($complete_condition) === 0) {
-                        return new WP_REST_Response("응모에 실패했습니다.", 400);
+                        return new WP_REST_Response("응모에 실패했습니다.", 409);
                     }
-                    if ($event["duplication"] === "0" && in_array($params["item_id"], $event["nft_list"])) {
+                    if ($event["duplication"] === "0" && in_array($item_id, $event["nft_list"])) {
                         return new WP_REST_Response("중복참여금지", 400);
                     }
+                    $complete_message = "떡상어를 무사히 화성에 보낸 것이 확인되어
+                    $itemname 분양이 완료되었습니다! 축하드려요~ :D";
                     break;
                 case "-":
                 default:
@@ -95,19 +111,19 @@ new raffe_event_custom_endpoint([
         } else {
             return new WP_REST_Response("이벤트에 등록되지 않은 아이템입니다.", 400);
         }
-        if (get_post_meta($params['item_id'], "owner", true) * 1 !== 0) {
-            return new WP_REST_Response("이미 분양된 아이템입니다.", 409);
-        }
         foreach ($data as $key => $value) {
-            if ($exist = in_array($value, get_post_meta($id, $key))) {
+            if ($exist = in_array($value, get_post_meta($item_id, $key))) {
                 return new WP_REST_Response("이미 응모한 유저입니다.", 409);
             }
-            add_post_meta($id, $key, $value);
+            add_post_meta($item_id, $key, $value);
         }
         if ($event["due_type"] === "full") {
-            update_post_meta($id, "owner", $params['user']);
+            update_post_meta($item_id, "owner", $user_id);
+            if ($complete_message === $default_complete_message) {
+                $complete_message = "분양에 성공했습니다.";
+            }
         }
-        return new WP_REST_Response("정상적으로 응모 되었습니다.", 200);
+        return new WP_REST_Response($complete_message, 200);
     },
 ]);
 
@@ -201,5 +217,22 @@ new raffe_event_custom_endpoint([
             $new_result["data"][$key] = $value;
         }
         return new WP_REST_Response($new_result, 200);
+    }
+]);
+
+
+//nft wallet 정보 변경
+new raffe_event_custom_endpoint([
+    "methods" => "POST",
+    "path" => "/walletaddress",
+    "namespace" => "raffle_event/v1",
+    "endpoint_callback" => function ($request) {
+        $params = $request->get_params();
+        $input = $params["input"];
+        $user = wp_get_current_user();
+        if ($user->ID === 0) return new WP_REST_Response("유저를 찾을 수 없습니다.", 404);
+        $update = update_user_meta($user->ID, 'wallet_address', $input);
+        if (!$update) return new WP_REST_Response("등록에 실패했습니다.", 500);
+        return new WP_REST_Response($user, 200);
     }
 ]);

@@ -34,8 +34,8 @@ class RaffleEvent_CustomEndpoint
             'permission_callback' => '__return_true'
         ];
         $this->option = array_merge($this->option, $option);
-        $this->fullpath = $this->option["namespace"] . $this->path["path"];
-        $this->register_api();
+        $this->fullpath = $this->option["namespace"] . $this->option["path"];
+        add_action('rest_api_init', array($this, "register_api"));
     }
 
     /**
@@ -43,7 +43,7 @@ class RaffleEvent_CustomEndpoint
      * 엔드포인트에서 리스폰스 이후 처리를 추가하기 위함
      * @return void
      */
-    private function endpoint_callback_extend($request)
+    public function endpoint_callback_extend($request)
     {
         /**
          * {endpoint_path}_pre_response_action
@@ -74,7 +74,7 @@ class RaffleEvent_CustomEndpoint
      * @param WP_REST_Request $request 워드프레스 리퀘스트 변수
      * @return void
      */
-    private function endpoint_callback(WP_REST_Request $request)
+    public function endpoint_callback(WP_REST_Request $request)
     {
         /**
          * {endpoint_path}_pre_request_action
@@ -103,7 +103,7 @@ class RaffleEvent_CustomEndpoint
      * 인스턴스의 옵션 변수를 사용해 Wordpress의 rest route에 함수를 신규 등록함
      * @return void
      */
-    private function register_api()
+    public function register_api()
     {
         register_rest_route(
             $this->option["namespace"],

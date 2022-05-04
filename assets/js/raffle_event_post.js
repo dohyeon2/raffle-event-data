@@ -76,6 +76,7 @@
     }
     function toggleValue() {
         const value = getInput().val();
+        const input = getInput();
         if (value === "0") {
             input.val("1");
         } else {
@@ -159,5 +160,18 @@
 
         // Finally, open the modal on click
         frame.open();
+    });
+})(jQuery);
+
+(($) => {
+    const INPUT_GROUP_BTN_INDICATOR = '#nft_group_input_button';
+    const NFT_GROUP_FORM_INDICATOR = '#nft_group_form';
+    const input_group_btn = $(INPUT_GROUP_BTN_INDICATOR);
+    const nft_group_form = $(NFT_GROUP_FORM_INDICATOR);
+    nft_group_form.on('submit', (e) => {
+        e.preventDefault();
+        const input = $(e.target).find("input");
+        const value = input.val();
+        console.log(value);
     });
 })(jQuery);

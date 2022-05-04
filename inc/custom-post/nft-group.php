@@ -1,5 +1,4 @@
 <?php
-
 new raffle_event_custom_post([
     "register_options" => [
         "show_in_menu" => "raffle",
@@ -10,8 +9,8 @@ new raffle_event_custom_post([
             "thumbnail"
         ]
     ],
-    "post_type_name" => "raffle_event_post",
-    "post_label_name" => "래플 이벤트 포스트"
+    "post_type_name" => "raffle_nft_group",
+    "post_label_name" => "NFT 그룹"
 ], [
     "passed_variables" => function ($post) {
         return ["test" => "test"];
@@ -23,20 +22,10 @@ new raffle_event_custom_post([
         }, get_post_meta($ID)));
         ob_start();
         $nft_list = @unserialize($nft_list) ?: [];
-        $participants = null;
         $duplication = @$duplication ?: "0";
 ?>
     <table class="form-table">
         <tbody>
-            <tr>
-                <th scope="row">중복참가</th>
-                <td>
-                    현재상태:<a id="duplication-button" class="button button-primary">
-                        <?= $duplication === "0" ? "중복금지" : "중복허용" ?>
-                    </a>
-                    <input type="hidden" name="duplication" value="<?= $duplication ?>" />
-                </td>
-            </tr>
             <tr>
                 <th scope="row">이미지 업로드</th>
                 <td>
@@ -71,42 +60,6 @@ new raffle_event_custom_post([
                 </td>
             </tr>
             <tr>
-                <th scope="row" class="set-start-date">시작 일시 설정</th>
-                <td class="set-start-date">
-                    <input type="date" name="start_date" value="<?= $start_date ?: date("Y-m-d") ?>" required />
-                    <input type="time" name="start_time" value="<?= $start_time ?: date("H:i") ?>" required />
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">만료타입 설정</th>
-                <td>
-                    <fieldset>
-                        <label for="due-date">
-                            <input name="due_type" type="radio" id="due-date" value="date" <?= @$due_type ? ($due_type === "date" ? "checked" : "") : "checked" ?> required>
-                            기한 만료시까지
-                        </label>
-                        &nbsp;|&nbsp;
-                        <label for="due-full">
-                            <input name="due_type" type="radio" id="due-full" value="full" <?= @$due_type === "full" ? "checked" : "" ?> required>
-                            선착순
-                        </label>
-                    </fieldset>
-                </td>
-            </tr>
-            <tr class="set-date">
-                <th scope="row">만료 기한 설정</th>
-                <td>
-                    <input type="date" name="end_date" value="<?= $end_date ?: "" ?>" />
-                    <input type="time" name="end_time" value="<?= $end_time ?: "" ?>" />
-                </td>
-            </tr>
-            <tr class="set-full">
-                <th scope="row">만료 인원 설정</th>
-                <td>
-                    <input type="number" name="full_count" value="<?= $full_count ?: 1 ?>" />
-                </td>
-            </tr>
-            <tr>
                 <th scope="row">분양 nft 리스트</th>
                 <td>
                     <input type="text" id="nft_list_input" list="nft_list">
@@ -118,6 +71,23 @@ new raffle_event_custom_post([
                     </script>
                     <datalist id="nft_list">
                         <?php
+                        (function () {
+                            $nft_list = "";
+                            global $wpdb;
+                            $data_list = $wpdb->get_results("SELECT DISTINCT 
+                                meta.meta_value, thumb.ID, thumb.post_title AS 'title'
+                                FROM
+                                (SELECT post_id, meta_key, meta_value FROM $wpdb->postmeta WHERE meta_value = 'nft_type') AS meta,
+                                (SELECT ID, post_type, post_title FROM $wpdb->posts WHERE post_type = 'attachment') AS thumb
+                                WHERE 
+                                meta.post_id = thumb.ID
+                                ", ARRAY_A);
+                            foreach ($data_list as $value) {
+                                $value['title'] = $value['title'] === "budong" ? "부동" : $value['title'];
+                                $nft_list .= "<option value=\"$value[title] (media:$value[ID])\"/>";
+                            }
+                            echo $nft_list;
+                        })();
                         (function () {
                             $nft_list = "";
                             foreach (get_posts([
@@ -134,66 +104,6 @@ new raffle_event_custom_post([
                     <div id="added_nft_list">
 
                     </div>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">NFT 그룹 리스트</th>
-                <td>
-                    <div>
-                        <table class="form-table">
-                            <tbody>
-                                <tr>
-                                    <th scope="row">
-                                        그룹 이름
-                                    </th>
-                                    <td>
-                                        <form id="nft_group_form">
-                                            <input type="text" id="nft_group_title" list="nft_group_list">
-                                            <button id="nft_group_input_button" class="button button-primary">등록하기</button>
-                                        </form>
-                                        <div class="input_status">
-
-                                        </div>
-                                        <datalist id="nft_group_list">
-                                            <?php
-                                            (function () {
-                                                global $wpdb;
-                                                $nft_type_list = get_posts([
-                                                    "post_type" => "attachment",
-                                                    "nopaging" => true,
-                                                    "meta_key" => "data_type",
-                                                    "meta_value" => "nft_type"
-                                                ]);
-                                                ob_start();
-                                                foreach ($nft_type_list as $key => $value) {
-                                                    if ($value->post_title === "budong") {
-                                                        $value->post_title = "부동";
-                                                    }
-                                                    $value->post_title = str_replace("_", " ", $value->post_title);
-                                            ?>
-                                                    <option><?= $value->post_title ?></option>
-                                            <?php
-                                                }
-                                                echo ob_get_clean();
-                                            })();
-                                            ?>
-                                        </datalist>
-
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <hr>
-                </td>
-            </tr>
-            <tr class="condition">
-                <th scope="row">조건 설정</th>
-                <td>
-                    <select name="condition">
-                        <option value="-" <?= @$condition === "-" ? "selected" : "" ?>>-</option>
-                        <option value="shark_in_mars" <?= @$condition === "shark_in_mars" ? "selected" : "" ?>>떡상어 보내기</option>
-                    </select>
                 </td>
             </tr>
         </tbody>
