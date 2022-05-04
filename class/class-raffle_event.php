@@ -72,7 +72,7 @@ class RaffleEvent_EventData
         $start_time = get_post_meta($event_id, $START_TIME_KEY, true);
         $end_tiem = get_post_meta($event_id, $END_TIME_KEY, true);
         $due_type = get_post_meta($event_id, $COMLETE_TYPE_KEY, true);
-        $goal_participate_count = get_post_meta($event_id, $GOAL_PARTICIPATE_COUNT_KEY, true) * 1;
+        @$goal_participate_count = get_post_meta($event_id, $GOAL_PARTICIPATE_COUNT_KEY, true) * 1;
 
         //예정됨    
         if ($start_time > $current_UTC9_time) {
@@ -114,6 +114,6 @@ class RaffleEvent_EventData
             default:
                 break;
         }
-        return $status;
+        return @$status;
     }
 }

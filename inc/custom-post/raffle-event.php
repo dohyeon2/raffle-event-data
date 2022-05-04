@@ -139,53 +139,65 @@ new raffle_event_custom_post([
             <tr>
                 <th scope="row">NFT 그룹 리스트</th>
                 <td>
-                    <div>
-                        <table class="form-table">
-                            <tbody>
-                                <tr>
-                                    <th scope="row">
-                                        그룹 이름
-                                    </th>
-                                    <td>
-                                        <form id="nft_group_form">
-                                            <input type="text" id="nft_group_title" list="nft_group_list">
-                                            <button id="nft_group_input_button" class="button button-primary">등록하기</button>
-                                        </form>
-                                        <div class="input_status">
+                    <input type="text" id="nft_group_title" list="nft_group_list">
+                    <button id="nft_group_input_button" class="button button-primary">등록하기</button>
+                    <div class="input_status">
 
-                                        </div>
-                                        <datalist id="nft_group_list">
-                                            <?php
-                                            (function () {
-                                                global $wpdb;
-                                                $nft_type_list = get_posts([
-                                                    "post_type" => "attachment",
-                                                    "nopaging" => true,
-                                                    "meta_key" => "data_type",
-                                                    "meta_value" => "nft_type"
-                                                ]);
-                                                ob_start();
-                                                foreach ($nft_type_list as $key => $value) {
-                                                    if ($value->post_title === "budong") {
-                                                        $value->post_title = "부동";
-                                                    }
-                                                    $value->post_title = str_replace("_", " ", $value->post_title);
-                                            ?>
-                                                    <option><?= $value->post_title ?></option>
-                                            <?php
-                                                }
-                                                echo ob_get_clean();
-                                            })();
-                                            ?>
-                                        </datalist>
-
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
-                    <hr>
+                    <datalist id="nft_group_list">
+                        <?php
+                        (function () {
+                            $nft_type_list = get_posts([
+                                "post_type" => "attachment",
+                                "nopaging" => true,
+                                "meta_key" => "data_type",
+                                "meta_value" => "nft_type"
+                            ]);
+                            ob_start();
+                            foreach ($nft_type_list as $key => $value) {
+                                if ($value->post_title === "budong") {
+                                    $value->post_title = "부동";
+                                }
+                                $value->post_title = str_replace("_", " ", $value->post_title);
+                        ?>
+                                <option><?= $value->post_title ?></option>
+                        <?php
+                            }
+                            echo ob_get_clean();
+                        })();
+                        ?>
+                    </datalist>
+                    <hr />
+                    <div id="nft-group-item-list">
+                        <?php
+                        (function ($ID) {
+                            ob_start();
+                        ?>
+                            <script>
+                                const groupList = [<?php
+                                                    $group_items = get_posts([
+                                                        "post_type" => "raffle_nft_group",
+                                                        "post_parent" => $ID,
+                                                        "nopaging" => true,
+                                                    ]);
+                                                    echo implode(",", array_map(
+                                                        function ($value) {
+                                                            return  json_encode([
+                                                                "label" => $value->post_title,
+                                                                "id" => $value->ID,
+                                                            ]);
+                                                        },
+                                                        $group_items
+                                                    ));
+                                                    ?>];
+                            </script>
+                        <?php
+                            echo ob_get_clean();
+                        })($ID);
+                        ?>
+                    </div>
                 </td>
+
             </tr>
             <tr class="condition">
                 <th scope="row">조건 설정</th>
