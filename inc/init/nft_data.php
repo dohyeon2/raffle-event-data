@@ -1,5 +1,6 @@
 <?php
 
+//이미지 및 데이터 입력하는 초기화 함수들
 function nft_type_img_insert()
 {
     require_once(ABSPATH . 'wp-admin/includes/media.php');

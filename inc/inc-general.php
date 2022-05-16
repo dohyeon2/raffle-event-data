@@ -1,11 +1,10 @@
 <?php
 
-use LDAP\Result;
-
 add_action('admin_enqueue_scripts', 'enqueue_style');
 
 function enqueue_style()
 {
+    //스타일 및 js 등록
     wp_register_script('main-script', plugins_url('/assets/js/index.js', FILE), null, null, true);
     wp_enqueue_media();
     wp_enqueue_script('main-script');
@@ -16,62 +15,16 @@ function enqueue_style()
         wp_register_script("$screen-script", $filename, ["jquery"], null, true);
         wp_enqueue_media();
         wp_enqueue_script("$screen-script");
+        wp_localize_script(
+            "$screen-script",
+            'ajax_object',
+            array('ajaxurl' => admin_url('admin-ajax.php'))
+        );
     }
 }
-
-//function to add custom media field
-function custom_media_add_media_custom_field()
-{
-?>
-    <div>test</div>
-<?php
-}
-add_action('post-html-upload-ui', 'custom_media_add_media_custom_field');
-
-
-add_filter('media_meta', function ($a, $b) {
-    global $wpdb;
-    $check_remain = @$wpdb->get_results(
-        @$wpdb->prepare(
-            "SELECT DISTINCT posts.ID
-            FROM 
-                $wpdb->posts AS posts,
-                $wpdb->postmeta AS meta,
-                $wpdb->postmeta AS meta2
-            WHERE
-                posts.post_type = %s AND
-                meta.post_id = posts.ID AND
-                meta2.post_id = posts.ID AND
-                meta.meta_key = %s AND
-                meta.meta_value = %s AND
-                meta2.meta_key = %s AND
-                meta2.meta_value = %s
-            ",
-            "nft_data",
-            "owner",
-            "0",
-            "apt_type",
-            str_replace("_", " ", $b->post_title)
-        ),
-        ARRAY_A
-    );
-    if (get_post_meta($b->ID, "data_type", true) === "nft_type") {
-        return $a . "<div style='word-break:pre-wrap'>
-        " . $b->post_title . "
-        <b>남은 아이템 (총 : " . count($check_remain) . "개)</b><br/>
-        " . implode(", ", array_map(function ($x) {
-            return get_post($x["ID"])->post_title;
-        }, $check_remain)) . "
-        </div>
-        <div>
-        <b>응모한 유저 리스트</b><br/>
-        </div>";
-    } else {
-        return $a;
-    }
-}, 1, 2);
 
 add_filter('raffle_event_custom_post_metadata', function ($data, $post) {
+    //커스텀 포스트 공통 메타데이타
     $user = wp_get_current_user();
     $newdata = [];
     $types = ["raffle_event_post", "media", "nft_data"];

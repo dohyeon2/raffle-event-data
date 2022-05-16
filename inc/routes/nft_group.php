@@ -1,4 +1,6 @@
 <?php
+
+//자체 ajax, group포스트 만드는 api
 new RaffleEvent_CustomEndpoint([
     "methods" => "POST",
     "path" => "/nft/group",
@@ -34,6 +36,7 @@ new RaffleEvent_CustomEndpoint([
     }
 ]);
 
+//자체 ajax, group포스트 지우는 api
 new RaffleEvent_CustomEndpoint([
     "methods" => "DELETE",
     "path" => "/nft/group",

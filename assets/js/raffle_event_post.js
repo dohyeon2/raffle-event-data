@@ -90,28 +90,41 @@
 })(jQuery);
 
 (($) => {
+    //nft item 관리 구문
     function add_item_to_list(value) {
         const matches = value.match(/([^(]+)\s\((.+)\)/);
-        const [all, label, id] = matches;
+        const [all, label, id] = matches || [];
         if ($(`.added_nft_data_item#item-${id}`).length > 0) {
             window.alert("이미 등록된 nft 입니다");
             return;
         }
-        const add_nft_data = $("<div class='added_nft_data_item' id='item-" + id + "'></div>");
+        const add_nft_data = $("<div class='added_nft_data_item' id='item-" + id + "' data-id='" + id + "'></div>");
         const add_nft_label = $("<div class='item_label'></div>");
         add_nft_label.css({
             padding: 5,
         });
         const add_nft_delete_button = $("<button type='button' class='item_delete_button button button-small button-secondary'>삭제</button>");
         const add_nft_data_hidden_input = $("<input type='hidden' name='nft_list[]'/>");
-        add_nft_data_hidden_input.attr("value", label.trim().replaceAll(" ", "_") + "-" + id);
-        add_nft_label.append($("<span style='margin-right:10px;'>" + label + "</span>"), add_nft_delete_button);
+        const nft_group_edit_button = $("<button type='button' class='item_edit_button button button-small'>수정</button>");
+        add_nft_data_hidden_input.attr("value", label?.trim()?.replaceAll(" ", "_") + "-" + id);
+        add_nft_label.append($("<span style='margin-right:10px;'>" + label + "</span>"), add_nft_delete_button, nft_group_edit_button);
         add_nft_data.append(add_nft_label, add_nft_data_hidden_input);
         added_nft_list.append(add_nft_data);
     }
     const added_nft_list = $("#added_nft_list");
     $(document).on('click', '.added_nft_data_item button.item_delete_button', (e) => {
         $(e.target).closest('.added_nft_data_item').remove();
+        if ($('.added_nft_data_item').length === 0) {
+            const add_nft_data_hidden_input = $("<input type='hidden' name='nft_list[]' value='clear'/>");
+            added_nft_list.append(add_nft_data_hidden_input);
+        } else {
+            $('inputp[name="nft_list[]"][value="clear"]').remove();
+        }
+    });
+    $(document).on('click', '.' + 'added_nft_data_item' + ' button.item_edit_button', (e) => {
+        const listItem = $(e.target).closest('.' + 'added_nft_data_item' + '');
+        const ID = listItem.data("id");
+        const editWindow = window.open("/wp-admin/post.php?post=" + ID + "&action=edit", "_blank");
     });
     function addItemFunc() {
         const value = $('#nft_list_input').val();
@@ -131,7 +144,7 @@
 })(jQuery);
 
 (($) => {
-
+    //이벤트 이미지 등록 버튼 이벤트
     $('.media-button').on('click', (e) => {
         const { target } = e;
         const { label, type } = target.dataset;
@@ -164,10 +177,9 @@
 })(jQuery);
 
 (($) => {
-    console.log(groupList);
+    //nft group 아이템 관리 구문
     const NFT_GROUP_ITEM_INDICATOR = 'nft_group_item';
     const INPUT_GROUP_BTN_INDICATOR = '#nft_group_input_button';
-    const NFT_GROUP_LIST_INDICATOR = '#nft-group-item-list';
     const addedNFTgroupList = $('#nft-group-item-list');
     const input_group_btn = $(INPUT_GROUP_BTN_INDICATOR);
     input_group_btn.on('click', (e) => {
@@ -181,7 +193,8 @@
         }
     });
 
-    groupList.forEach(x => {
+    const group = groupList || [];
+    group?.forEach(x => {
         add_item_to_list(x.label, x.id);
     });
 
@@ -207,6 +220,10 @@
     $(document).on('click', '.' + NFT_GROUP_ITEM_INDICATOR + ' button.item_delete_button', (e) => {
         const listItem = $(e.target).closest('.' + NFT_GROUP_ITEM_INDICATOR + '');
         const ID = listItem.data("id");
+        const confirm = window.confirm("여기서 그룹을 삭제하면, 그룹 포스트도 삭제됩니다.\n정말로 삭제합니까?");
+        if (!confirm) {
+            return true;
+        }
         makeAPIforDeleteGroupPost({
             ID, successCallback: () => { listItem.remove() }
         });
@@ -216,6 +233,7 @@
         const ID = listItem.data("id");
         const editWindow = window.open("/wp-admin/post.php?post=" + ID + "&action=edit", "_blank");
     });
+
 
     function makeAPIforCreateGroupPost({
         postname,

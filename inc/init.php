@@ -49,7 +49,5 @@ function raffle_event_init_plugin()
     foreach ($catarr as $value) {
         insert_category($value);
     }
-    // nft_type_img_insert();
-    // nft_data_insert();
 }
 register_activation_hook(FILE, 'raffle_event_init_plugin');

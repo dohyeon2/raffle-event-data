@@ -1,5 +1,5 @@
 <?php
-
+//이벤트 커스텀 포스트
 new raffle_event_custom_post([
     "register_options" => [
         "show_in_menu" => "raffle",
@@ -13,9 +13,6 @@ new raffle_event_custom_post([
     "post_type_name" => "raffle_event_post",
     "post_label_name" => "래플 이벤트 포스트"
 ], [
-    "passed_variables" => function ($post) {
-        return ["test" => "test"];
-    },
     "custom_box_html" => function ($post) {
         extract((array)$post);
         extract(array_map(function ($v) {
@@ -23,7 +20,6 @@ new raffle_event_custom_post([
         }, get_post_meta($ID)));
         ob_start();
         $nft_list = @unserialize($nft_list) ?: [];
-        $participants = null;
         $duplication = @$duplication ?: "0";
 ?>
     <table class="form-table">
@@ -52,7 +48,7 @@ new raffle_event_custom_post([
                             background-image:url('<?= wp_get_attachment_url(@$char_img) ?>');
                         "></div>
                         <?= @$char_img ? '<input type="hidden" name="char_img" value="' . $char_img . '"/>' : "" ?>
-                        <a data-type="char" data-label="캐릭터 이미지를 업로드 합니다." class="media-button button button-small button-primary">캐릭터 이미지 업로드</a>
+                        <a data-type="char" type="button" data-label="캐릭터 이미지를 업로드 합니다." class="media-button button button-small button-primary">캐릭터 이미지 업로드</a>
                     </div>
                     <div class="img_container">
                         <div class="bg-img img-thumb" style="
@@ -66,7 +62,7 @@ new raffle_event_custom_post([
                             background-image:url('<?= wp_get_attachment_url(@$bg_img) ?>');
                         "></div>
                         <?= @$bg_img ? '<input type="hidden" name="bg_img" value="' . $bg_img . '"/>' : "" ?>
-                        <a data-type="bg" data-label="배경 이미지를 업로드 합니다." class="media-button button button-small button-secondary">배경 이미지 업로드</a>
+                        <a data-type="bg" type="button" data-label="배경 이미지를 업로드 합니다." class="media-button button button-small button-secondary">배경 이미지 업로드</a>
                     </div>
                 </td>
             </tr>
@@ -140,7 +136,7 @@ new raffle_event_custom_post([
                 <th scope="row">NFT 그룹 리스트</th>
                 <td>
                     <input type="text" id="nft_group_title" list="nft_group_list">
-                    <button id="nft_group_input_button" class="button button-primary">등록하기</button>
+                    <button id="nft_group_input_button" type="button" class="button button-primary">등록하기</button>
                     <div class="input_status">
 
                     </div>
@@ -210,7 +206,7 @@ new raffle_event_custom_post([
             </tr>
         </tbody>
     </table>
-<?php
+    <?php
         $html = ob_get_clean();
         echo $html;
     },
@@ -221,45 +217,82 @@ new raffle_event_custom_post([
             if (key_exists($value, $_POST)) {
                 update_post_meta($post_id, $value, $_POST[$value]);
             }
+            if ($value === "nft_list" && @$_POST[$value][0] === "clear") {
+                delete_post_meta($post_id, $value);
+            }
         }
+        //Y-m-d H:i:s형 시간을 초로 변환하여 메타데이터에 입력
         if (key_exists('start_date', $_POST) && key_exists('start_time', $_POST)) {
-            update_post_meta($post_id, "start_time_int", strtotime($_POST['start_date'] . " " . $_POST['start_time']) + (HOUR_IN_SECONDS * 9));
+            update_post_meta($post_id, "start_time_int", strtotime($_POST['start_date'] . " " . $_POST['start_time']));
         }
         if (key_exists('end_date', $_POST) && key_exists('end_time', $_POST)) {
-            update_post_meta($post_id, "end_time_int", strtotime($_POST['end_date'] . " " . $_POST['end_time']) + (HOUR_IN_SECONDS * 9));
+            update_post_meta($post_id, "end_time_int", strtotime($_POST['end_date'] . " " . $_POST['end_time']));
         }
-    }
+    },
+    "type_posts_columns" => function ($columns) {
+        $columns["announce"] = "발표 현황";
+        return $columns;
+    },
+    "type_custom_columns" => function ($column_name, $pid) {
+        //발표 칼럼 등록부분
+        $announce_id = RaffleEvent_EventData::check_event_is_announced($pid);
+        $categories = wp_get_post_categories($pid);
+        $category = get_category($categories[0]);
+        $status = $category->slug;
+        if (!(bool)$status) {
+            echo "비정상적인 카테고리";
+            return;
+        }
+        $status = preg_replace("/raffle-event-/", "", $status);
+        $disabled = $status === "end" ? "" : "disabled";
+        $attrs = [
+            $disabled
+        ];
+        $status_korean = $category->name;
+        if ($column_name === "announce") {
+            ob_start();
+    ?>
+        <div>
+            <div><b><?= $status_korean ?></b></div>
+            <?php
+            if ($announce_id === false) {
+            ?>
+                <button type="button" class="button make-announce" data-pid="<?= $pid ?>" <?= implode(" ", $attrs) ?>>발표하기</button>
+            <?php
+            } else {
+            ?>
+                <button type="button" class="button edit-announce" data-url="<?= RaffleEvent_EventData::get_raffle_event_announce_edit_url($pid) ?>" <?= implode(" ", $attrs) ?>>발표 편집하기</button>
+            <?php
+            }
+            ?>
+        </div>
+        <small>이벤트가 종료되면 발표하기 버튼이 활성화됩니다.</small>
+<?php
+            echo ob_get_clean();
+        }
+    },
 ], [],  [
-    "raffle_event_custom_post_metadata" => [function ($arr, $post) {
-        if ($post["type"] === "raffle_event_post") {
-            $event_id = $post["id"];
-            $new_arr = [];
-            foreach ($arr as $key => $value) {
-                if ($v = @unserialize($value)) {
-                    $x = $v;
-                } else {
-                    $x = $value;
-                }
-                $new_arr[$key] = $x;
+    "raffle_event_post_metadata" => [function ($arr, $post) {
+        //래플 이벤트의 메타데이터 response 수정
+        $event_id = $post["id"];
+        $new_arr = [];
+        foreach ($arr as $key => $value) {
+            if ($v = @unserialize($value)) {
+                $x = $v;
+            } else {
+                $x = $value;
             }
-            $event_data = new RaffleEvent_EventData($post["id"]);
-            $new_arr["nft_group_list"] = $event_data->get_nft_group_items();
-            $new_arr["participants"] = 0;
-            $new_arr["nft_list_ids"] = [];
-            $new_arr["participants_list"]  = [];
-            if (key_exists("nft_list", $new_arr)) {
-                foreach ($new_arr["nft_list"] as $key => $value) {
-                    preg_match("/-.*?:?(\d+)/", $value, $match);
-                    $id = $match[1];
-                    $new_arr["participants"] += count(get_post_meta($id, "participants_list")) ?: 0;
-                    $new_arr["participants_list"] = array_merge($new_arr["participants_list"], get_post_meta($id, "participants_list"));
-                    array_push($new_arr["nft_list_ids"], $id);
-                }
-            }
-            $event_instance = new RaffleEvent_EventData($event_id);
-            $event_instance->update_event_status();
-            return $new_arr;
+            $new_arr[$key] = $x;
         }
-        return $arr;
-    }, 10, 2]
+        $event_data = new RaffleEvent_EventData($post["id"]);
+        $new_arr["nft_group_list"] = array_map(function ($x) {
+            return $x->post_title . "-" . $x->ID;
+        }, $event_data->get_nft_group_items());
+        $new_arr["participants"] = RaffleEvent_EventData::get_all_participates_count_of_event($event_id);
+        $new_arr["nft_list_ids"] = [];
+        $event_instance = new RaffleEvent_EventData($event_id);
+        $event_instance->update_event_status();
+        $new_arr["full_count"] = RaffleEvent_EventData::get_current_full_count($event_id);
+        return $new_arr;
+    }, 10, 2],
 ]);

@@ -1,4 +1,5 @@
 <?php
+//nft그룹 데이터
 new raffle_event_custom_post([
     "register_options" => [
         "show_in_menu" => "raffle",
@@ -12,9 +13,6 @@ new raffle_event_custom_post([
     "post_type_name" => "raffle_nft_group",
     "post_label_name" => "NFT 그룹"
 ], [
-    "passed_variables" => function ($post) {
-        return ["test" => "test"];
-    },
     "custom_box_html" => function ($post) {
         extract((array)$post);
         extract(array_map(function ($v) {
@@ -22,7 +20,6 @@ new raffle_event_custom_post([
         }, get_post_meta($ID)));
         ob_start();
         $nft_list = @unserialize($nft_list) ?: [];
-        $duplication = @$duplication ?: "0";
 ?>
     <table class="form-table">
         <tbody>
@@ -114,48 +111,47 @@ new raffle_event_custom_post([
     },
     "save_postdata" => function ($post_id) {
         date_default_timezone_set("Asia/Seoul");
-        $list = ["start_date", "start_time", "due_date", "due_time", "end_date", "end_time", "full_count", "due_type", "nft_list", "condition", "bg_img", "char_img", "duplication"];
+        $list = ["nft_list", "bg_img", "char_img"];
         foreach ($list as $value) {
             if (key_exists($value, $_POST)) {
                 update_post_meta($post_id, $value, $_POST[$value]);
             }
-        }
-        if (key_exists('start_date', $_POST) && key_exists('start_time', $_POST)) {
-            update_post_meta($post_id, "start_time_int", strtotime($_POST['start_date'] . " " . $_POST['start_time']) + (HOUR_IN_SECONDS * 9));
-        }
-        if (key_exists('end_date', $_POST) && key_exists('end_time', $_POST)) {
-            update_post_meta($post_id, "end_time_int", strtotime($_POST['end_date'] . " " . $_POST['end_time']) + (HOUR_IN_SECONDS * 9));
+            if ($value === "nft_list" && @$_POST[$value][0] === "clear") {
+                delete_post_meta($post_id, $value);
+            }
         }
     }
 ], [],  [
-    "raffle_event_custom_post_metadata" => [function ($arr, $post) {
-        if ($post["type"] === "raffle_event_post") {
-            $event_id = $post["id"];
-            $new_arr = [];
-            foreach ($arr as $key => $value) {
-                if ($v = @unserialize($value)) {
-                    $x = $v;
-                } else {
-                    $x = $value;
-                }
-                $new_arr[$key] = $x;
-            }
-            $new_arr["participants"] = 0;
-            $new_arr["nft_list_ids"] = [];
-            $new_arr["participants_list"]  = [];
-            if (key_exists("nft_list", $new_arr)) {
-                foreach ($new_arr["nft_list"] as $key => $value) {
-                    preg_match("/-.*?:?(\d+)/", $value, $match);
-                    $id = $match[1];
-                    $new_arr["participants"] += count(get_post_meta($id, "participants_list")) ?: 0;
-                    $new_arr["participants_list"] = array_merge($new_arr["participants_list"], get_post_meta($id, "participants_list"));
-                    array_push($new_arr["nft_list_ids"], $id);
-                }
-            }
-            $event_instance = new RaffleEvent_EventData($event_id);
-            $event_instance->update_event_status();
-            return $new_arr;
-        }
+    "raffle_nft_group_metadata" => [function ($arr, $post) {
+        //nft 그룹의 메타데이터 response 수정
+        $arr = get_post_meta($post['id']);
+        @$arr["char_img"] = @$arr["char_img"] ? wp_get_attachment_url($arr["char_img"][0]) : "";
+        @$arr["bg_img"] = @$arr["bg_img"] ? wp_get_attachment_url($arr["bg_img"][0]) : "";
+        $arr["event"] = get_post($post['id'])->post_parent;
+        $arr["event_due_type"] = get_post_meta($arr["event"], "due_type", true);
+        $nft_list = get_post_meta($post["id"], "nft_list", true);
+        $arr["nft_list"] = array_map(function ($x, $i) {
+            preg_match("/-.*?:?(\d+)/", $x, $match);
+            $post_id = $match[1];
+            $post = get_post($match[1]);
+            $user_participated = in_array(wp_get_current_user()->ID, get_post_meta($post_id, "participants_list") ?: []);
+            return [
+                "ID" => $match[1],
+                "number" => $i + 1,
+                "user_participated" => $user_participated,
+                "participants_list" => get_post_meta($post_id, "participants_list"),
+                "participants" => count(get_post_meta($post_id, "participants_list") ?: 0),
+                "post_title" => $post->post_title,
+            ];
+        }, $nft_list, array_keys($nft_list));
+        $pariticipants_list =  array_reduce($arr["nft_list"], function ($acc, $curr) {
+            return [...$acc, ...$curr["participants_list"]];
+        }, []);
+        $arr["participate_count"] = count($pariticipants_list);
+        $arr["user_participate_count"] = array_reduce($arr["nft_list"], function ($acc, $curr) {
+            return $acc + ($curr["user_participated"] ? 1 : 0);
+        }, 0);
+        $arr["user_can_participate"] = $arr["user_participate_count"] >= 10 ? false : true;
         return $arr;
-    }, 10, 2]
+    }, 10, 2],
 ]);

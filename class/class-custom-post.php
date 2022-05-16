@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Deprecated:다음버전에서 사라질 클래스
+ * Future: 다음버전에서 수정될 클래스
  * @see class/RaffleEvent_CustomPost
  */
 class raffle_event_custom_post
@@ -95,7 +95,8 @@ class raffle_event_custom_post
                             return false;
                         }
                     }, ARRAY_FILTER_USE_KEY);
-                    return apply_filters('raffle_event_custom_post_metadata', $meta, $data);
+                    $meta = apply_filters('raffle_event_custom_post_metadata', $meta, $data);
+                    return apply_filters($this->array["post_type_name"] . '_metadata', $meta, $data);
                 },
             )
         );
@@ -108,7 +109,7 @@ class raffle_event_custom_post
         ));
         register_rest_field($this->array["post_type_name"], 'request_server_time', array(
             'get_callback' => function ($data) {
-                return time() + 9 * 60 * 60;
+                return time();
             },
         ));
         foreach ($this->rest_attr as $key => $value) {

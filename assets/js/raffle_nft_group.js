@@ -90,28 +90,41 @@
 })(jQuery);
 
 (($) => {
+    //nft 아이템 관리 구문
     function add_item_to_list(value) {
         const matches = value.match(/([^(]+)\s\((.+)\)/);
-        const [all, label, id] = matches;
+        const [all, label, id] = matches || [];
         if ($(`.added_nft_data_item#item-${id}`).length > 0) {
             window.alert("이미 등록된 nft 입니다");
             return;
         }
-        const add_nft_data = $("<div class='added_nft_data_item' id='item-" + id + "'></div>");
+        const add_nft_data = $("<div class='added_nft_data_item' id='item-" + id + "' data-id='" + id + "'></div>");
         const add_nft_label = $("<div class='item_label'></div>");
         add_nft_label.css({
             padding: 5,
         });
         const add_nft_delete_button = $("<button type='button' class='item_delete_button button button-small button-secondary'>삭제</button>");
         const add_nft_data_hidden_input = $("<input type='hidden' name='nft_list[]'/>");
-        add_nft_data_hidden_input.attr("value", label.trim().replaceAll(" ", "_") + "-" + id);
-        add_nft_label.append($("<span style='margin-right:10px;'>" + label + "</span>"), add_nft_delete_button);
+        const nft_group_edit_button = $("<button type='button' class='item_edit_button button button-small'>수정</button>");
+        add_nft_data_hidden_input.attr("value", label?.trim()?.replaceAll(" ", "_") + "-" + id);
+        add_nft_label.append($("<span style='margin-right:10px;'>" + label + "</span>"), add_nft_delete_button, nft_group_edit_button);
         add_nft_data.append(add_nft_label, add_nft_data_hidden_input);
         added_nft_list.append(add_nft_data);
     }
     const added_nft_list = $("#added_nft_list");
     $(document).on('click', '.added_nft_data_item button.item_delete_button', (e) => {
         $(e.target).closest('.added_nft_data_item').remove();
+        if ($('.added_nft_data_item').length === 0) {
+            const add_nft_data_hidden_input = $("<input type='hidden' name='nft_list[]' value='clear'/>");
+            added_nft_list.append(add_nft_data_hidden_input);
+        } else {
+            $('inputp[name="nft_list[]"][value="clear"]').remove();
+        }
+    });
+    $(document).on('click', '.' + 'added_nft_data_item' + ' button.item_edit_button', (e) => {
+        const listItem = $(e.target).closest('.' + 'added_nft_data_item' + '');
+        const ID = listItem.data("id");
+        const editWindow = window.open("/wp-admin/post.php?post=" + ID + "&action=edit", "_blank");
     });
     function addItemFunc() {
         const value = $('#nft_list_input').val();
@@ -131,7 +144,7 @@
 })(jQuery);
 
 (($) => {
-
+    //미디어 버튼 이벤트
     $('.media-button').on('click', (e) => {
         const { target } = e;
         const { label, type } = target.dataset;
@@ -161,96 +174,4 @@
         // Finally, open the modal on click
         frame.open();
     });
-})(jQuery);
-
-(($) => {
-    console.log(groupList);
-    const NFT_GROUP_ITEM_INDICATOR = 'nft_group_item';
-    const INPUT_GROUP_BTN_INDICATOR = '#nft_group_input_button';
-    const NFT_GROUP_LIST_INDICATOR = '#nft-group-item-list';
-    const addedNFTgroupList = $('#nft-group-item-list');
-    const input_group_btn = $(INPUT_GROUP_BTN_INDICATOR);
-    input_group_btn.on('click', (e) => {
-        e.preventDefault();
-        const input = $(e.currentTarget).parent().find("input");
-        const value = input.val();
-        if (value) {
-            makeAPIforCreateGroupPost({
-                postname: value,
-            });
-        }
-    });
-
-    groupList.forEach(x => {
-        add_item_to_list(x.label, x.id);
-    });
-
-    function add_item_to_list(label, id) {
-        if ($(`.${NFT_GROUP_ITEM_INDICATOR}#item-${id}`).length > 0) {
-            window.alert("이미 등록된 nft 입니다");
-            return;
-        }
-        const add_nft_data = $("<div class='" + NFT_GROUP_ITEM_INDICATOR + "' id='item-" + id + "' data-id=" + id + "></div>");
-        const add_nft_label = $("<div class='item_label'></div>");
-        add_nft_label.css({
-            padding: 5,
-        });
-        const add_nft_delete_button = $("<button type='button' class='item_delete_button button button-small button-secondary'>삭제</button>");
-        const nft_group_edit_button = $("<button type='button' class='item_edit_button button button-small'>수정</button>");
-        const add_nft_data_hidden_input = $("<input type='hidden' name='nft_group_list[]'/>");
-        add_nft_data_hidden_input.attr("value", label.trim().replaceAll(" ", "_") + "-" + id);
-        add_nft_label.append($("<span style='margin-right:10px;'>" + label + "</span>"), add_nft_delete_button, nft_group_edit_button);
-        add_nft_data.append(add_nft_label, add_nft_data_hidden_input);
-        addedNFTgroupList.append(add_nft_data);
-    }
-
-    $(document).on('click', '.' + NFT_GROUP_ITEM_INDICATOR + ' button.item_delete_button', (e) => {
-        const listItem = $(e.target).closest('.' + NFT_GROUP_ITEM_INDICATOR + '');
-        const ID = listItem.data("id");
-        makeAPIforDeleteGroupPost({
-            ID, successCallback: () => { listItem.remove() }
-        });
-    });
-    $(document).on('click', '.' + NFT_GROUP_ITEM_INDICATOR + ' button.item_edit_button', (e) => {
-        const listItem = $(e.target).closest('.' + NFT_GROUP_ITEM_INDICATOR + '');
-        const ID = listItem.data("id");
-        const editWindow = window.open("/wp-admin/post.php?post=" + ID + "&action=edit", "_blank");
-    });
-
-    function makeAPIforCreateGroupPost({
-        postname,
-    }) {
-        const post_id = $("#post_ID").val();
-        $.ajax("/wp-json/raffle_event/v1/nft/group", {
-            method: "POST",
-            data: {
-                "post_title": postname,
-                "parent": post_id
-            },
-            success: function (res) {
-                add_item_to_list(postname, res.ID);
-            },
-            error: function (res) {
-                window.alert(JSON.parse(res.responseText).message);
-            }
-        });
-    }
-    function makeAPIforDeleteGroupPost({
-        ID,
-        successCallback
-    }) {
-        $.ajax("/wp-json/raffle_event/v1/nft/group", {
-            method: "DELETE",
-            data: {
-                ID: ID
-            },
-            success: function (res) {
-                successCallback();
-            },
-            error: function (res) {
-                window.alert(JSON.parse(res.responseText).message);
-            }
-        });
-    }
-
 })(jQuery);
